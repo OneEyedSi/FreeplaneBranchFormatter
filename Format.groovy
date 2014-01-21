@@ -98,11 +98,11 @@ def colorPalette1 = [new ColorSet(title:"purple", backgroundColorCode:"#c898ff",
                                 edgeColorCode:"#6198bc"), 
                   new ColorSet(title:"strong blue", backgroundColorCode:"#6fdcff", textColorCode:"#000000", 
                                 edgeColorCode:"#49a69f"), 
-                  new ColorSet(title:"weak green", backgroundColorCode:"#a2ffc7", textColorCode:"#000000", 
+                  new ColorSet(title:"weak green", backgroundColorCode:"#a2ffd0", textColorCode:"#000000", 
                                 edgeColorCode:"#53bb6b"), 
                   new ColorSet(title:"dull green", backgroundColorCode:"#aedda5", textColorCode:"#000000", 
                                 edgeColorCode:"#679a67"), 
-                  new ColorSet(title:"lime green", backgroundColorCode:"#d0ff8b", textColorCode:"#000000", 
+                  new ColorSet(title:"lime green", backgroundColorCode:"#BDFF78", textColorCode:"#000000", 
                                 edgeColorCode:"#8aaf3e"), 
                   new ColorSet(title:"yellow", backgroundColorCode:"#ffff8a", textColorCode:"#000000", 
                                 edgeColorCode:"#bbb75e"), 
@@ -110,7 +110,7 @@ def colorPalette1 = [new ColorSet(title:"purple", backgroundColorCode:"#c898ff",
                                 edgeColorCode:"#f09a46"), 
                   new ColorSet(title:"weak red", backgroundColorCode:"#fb9a98", textColorCode:"#000000", 
                                 edgeColorCode:"#ee4444"), 
-                  new ColorSet(title:"pink", backgroundColorCode:"#fa99cf", textColorCode:"#000000", 
+                  new ColorSet(title:"pink", backgroundColorCode:"#ff7eac", textColorCode:"#000000", 
                                 edgeColorCode:"#ed4497"), 
                   new ColorSet(title:"magenta", backgroundColorCode:"#fa98ff", textColorCode:"#000000", 
                                 edgeColorCode:"#b863a7"), 
@@ -136,7 +136,7 @@ def colorPalette1 = [new ColorSet(title:"purple", backgroundColorCode:"#c898ff",
                   new ColorSet(title:"dark red", backgroundColorCode:"#ee4444", textColorCode:"#ffffff", 
                                 edgeColorCode:"#fb9a98"), 
                   new ColorSet(title:"dark pink", backgroundColorCode:"#ed4497", textColorCode:"#ffffff", 
-                                edgeColorCode:"#fa99cf"), 
+                                edgeColorCode:"#ff7eac"), 
                   new ColorSet(title:"dark magenta", backgroundColorCode:"#b863a7", textColorCode:"#ffffff", 
                                 edgeColorCode:"#fa98ff")]
 def forkTextColorCode = "#000000"
@@ -159,17 +159,16 @@ enum ColorSequence
 
 def selectedColorPalette = 1
 def applyLevelStyles = true
-def overallColorOffset = 6
-def rootColorColumn = ColumnToPickRootColorFrom.LEFT
-// If hasUniqueRootColor false then top node colour on left or right (as 
-//  appropriate) will be the same as the root node colour.  
-//  If hasUniqueRootColor true then root node colour will not match either 
-//  of the top node colours.
-def hasUniqueRootColor = true
-def colorSequence = ColorSequence.COLUMNS
+// Color indices are zero-based.
+def rootColorIndex = 7
+def firstNodeColorIndex = 1
+def colorSequence = ColorSequence.WHEEL
 
 def colorPalette = colorPalettes[selectedColorPalette]
 def numberColors = colorPalette.size
+
+rootColorIndex = rootColorIndex % numberColors
+firstNodeColorIndex = firstNodeColorIndex % numberColors
 
 def void clearNodeFormatting(Proxy.Node nodeToFormat)
 {
@@ -276,20 +275,6 @@ def int getLeftNodesColorOffset(int numberColors)
     return (int)(numberColors / 2) + 1
 }
 
-def leftNodesColorOffset = getLeftNodesColorOffset(numberColors)
-
-def int getRootColorIndex(ColumnToPickRootColorFrom columnToPickColorFrom, 
-    int overallColorOffset, int leftNodesColorOffset, int numberColors)
-{
-    int rootColorIndex = overallColorOffset
-    if (columnToPickColorFrom == ColumnToPickRootColorFrom.LEFT)
-    {
-        rootColorIndex = overallColorOffset + leftNodesColorOffset
-    }    
-    
-    return rootColorIndex % numberColors
-}
-
 def void setRootColor(rootNode, colorPalette, rootColorIndex, 
     rootTextColorCode)
 {
@@ -308,32 +293,29 @@ if (applyLevelStyles)
     applyLevelStyle(root)
 }
 
-def rootColorIndex = getRootColorIndex(rootColorColumn, 
-    overallColorOffset, leftNodesColorOffset, numberColors)
 setRootColor(root, colorPalette, rootColorIndex, rootTextColorCode)
 
 // Order that nodes are returned in may jump from right side of root to left 
 //  and back again.  However, on each side the nodes are always returned in 
 //  descending order, from top to bottom.  So keep track of the node counts 
 //  on each side separately.
-def rightNodeCount = 0
-def leftNodeCount = 0
+def rightNodeRawColorIndex = 0
+def leftNodeRawColorIndex = 0
 if (colorSequence == ColorSequence.COLUMNS)
 {
-    rightNodeCount = overallColorOffset
-    leftNodeCount = overallColorOffset + getLeftNodesColorOffset(numberColors)
+    rightNodeRawColorIndex = firstNodeColorIndex
+    leftNodeRawColorIndex = firstNodeColorIndex + getLeftNodesColorOffset(numberColors)
 }
 else
 {
-    rightNodeCount = rootColorIndex
-    leftNodeCount = rightNodeCount + numberLevel1Nodes + 1
+    rightNodeRawColorIndex = firstNodeColorIndex
+    leftNodeRawColorIndex = rightNodeRawColorIndex + numberLevel1Nodes + 1
 }
 
-if (!hasUniqueRootColor)
-{
-    rightNodeCount--
-    leftNodeCount--
-}
+// Increment color indices at start of each loop so step back 1 before start to 
+//	ensure they start at the correct index.
+rightNodeRawColorIndex--
+leftNodeRawColorIndex--
 
 def colourIndex = -1
 for (topLevelNode in level1Nodes)
@@ -342,18 +324,18 @@ for (topLevelNode in level1Nodes)
     {
         if (colorSequence == ColorSequence.COLUMNS)
         {
-            leftNodeCount++
+            leftNodeRawColorIndex++
         }
         else
         {
-            leftNodeCount--
+            leftNodeRawColorIndex--
         }        
-        colourIndex = leftNodeCount % numberColors
+        colourIndex = leftNodeRawColorIndex % numberColors
     }
     else
     {
-        rightNodeCount++
-        colourIndex = rightNodeCount % numberColors
+        rightNodeRawColorIndex++
+        colourIndex = rightNodeRawColorIndex % numberColors
     }
     
     def colorSet = colorPalette[colourIndex]
