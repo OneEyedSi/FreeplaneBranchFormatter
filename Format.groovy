@@ -110,7 +110,7 @@ def colorPalette1 = [new ColorSet(title:"purple", backgroundColorCode:"#c898ff",
                                 edgeColorCode:"#f09a46"), 
                   new ColorSet(title:"weak red", backgroundColorCode:"#fb9a98", textColorCode:"#000000", 
                                 edgeColorCode:"#ee4444"), 
-                  new ColorSet(title:"pink", backgroundColorCode:"#ff7eac", textColorCode:"#000000", 
+                  new ColorSet(title:"pink", backgroundColorCode:"#ff8ebc", textColorCode:"#000000", 
                                 edgeColorCode:"#ed4497"), 
                   new ColorSet(title:"magenta", backgroundColorCode:"#fa98ff", textColorCode:"#000000", 
                                 edgeColorCode:"#b863a7"), 
@@ -136,7 +136,7 @@ def colorPalette1 = [new ColorSet(title:"purple", backgroundColorCode:"#c898ff",
                   new ColorSet(title:"dark red", backgroundColorCode:"#ee4444", textColorCode:"#ffffff", 
                                 edgeColorCode:"#fb9a98"), 
                   new ColorSet(title:"dark pink", backgroundColorCode:"#ed4497", textColorCode:"#ffffff", 
-                                edgeColorCode:"#ff7eac"), 
+                                edgeColorCode:"#ff8ebc"), 
                   new ColorSet(title:"dark magenta", backgroundColorCode:"#b863a7", textColorCode:"#ffffff", 
                                 edgeColorCode:"#fa98ff")]
 def forkTextColorCode = "#000000"
@@ -144,12 +144,6 @@ def forkBackgroundColorCode = null  // Transparent - will pick up map background
 def mapBackgroundColorCode = "#ffffdb"
 def rootTextColorCode = "#000000"
 def colorPalettes = [colorPalette0, colorPalette1]
-
-enum ColumnToPickRootColorFrom
-{
-    LEFT,
-    RIGHT
-}
 
 enum ColorSequence
 {
@@ -160,8 +154,8 @@ enum ColorSequence
 def selectedColorPalette = 1
 def applyLevelStyles = true
 // Color indices are zero-based.
-def rootColorIndex = 7
-def firstNodeColorIndex = 1
+def rootColorIndex = 5
+def firstNodeColorIndex = 6
 def colorSequence = ColorSequence.WHEEL
 
 def colorPalette = colorPalettes[selectedColorPalette]
