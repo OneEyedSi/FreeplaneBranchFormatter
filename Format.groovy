@@ -6,6 +6,9 @@ import org.freeplane.features.mode.ModeController
 import org.freeplane.features.nodestyle.NodeStyleController
 import org.freeplane.plugin.script.proxy.Proxy
 
+import org.freeplane.features.cloud.CloudController
+import org.freeplane.features.cloud.mindmapmode.MCloudController
+
 class NodeShape
 {
     static String getShapeStyle(Proxy.Node nodeToRead)
@@ -37,6 +40,30 @@ class NodeShape
         final MNodeStyleController styleController = 
             (MNodeStyleController) modeController.getExtension(NodeStyleController.class);
         styleController.setShape(nodeToSet.delegate, style)
+    }
+}
+
+class NodeCloud
+{
+	static void clearCloud(Proxy.Node node)
+	{
+		setCloud(node, false)
+	}
+	
+	static void setCloud(Proxy.Node node)
+	{
+		setCloud(node, true)
+	}
+
+	// Set to true to add a cloud, false to remove a cloud from selected node.
+	//	Is idempotent: Attempting to add a cloud if one already exists, or 
+	//	remove one if no cloud exists, has no effect (doesn't add second 
+	//	cloud and causes no error).	
+	static void setCloud (Proxy.Node node, enableCloud)
+    {
+		final MCloudController cloudController = 
+			(MCloudController) CloudController.getController()
+		cloudController.setCloud(node.delegate, enableCloud)
     }
 }
 
@@ -157,6 +184,7 @@ def applyLevelStyles = true
 def rootColorIndex = 5
 def firstNodeColorIndex = 6
 def colorSequence = ColorSequence.WHEEL
+def addClouds = false
 
 def colorPalette = colorPalettes[selectedColorPalette]
 def numberColors = colorPalette.size
@@ -311,6 +339,29 @@ else
 rightNodeRawColorIndex--
 leftNodeRawColorIndex--
 
+void setCloud(topLevelNode, addClouds, currentNodeCount)
+{
+    if (!addClouds)
+	{
+		return
+	}
+	
+	def isEven = (currentNodeCount % 2 == 0)
+	
+	// Add clouds only to the odd numbered nodes.
+	if (isEven)
+	{
+		NodeCloud.clearCloud(topLevelNode)
+	}
+	else
+	{
+		NodeCloud.setCloud(topLevelNode)
+	}
+}
+
+def leftNodeCount = -1
+def rightNodeCount = -1
+def currentNodeCount = -1
 def colourIndex = -1
 for (topLevelNode in level1Nodes)
 {
@@ -325,13 +376,19 @@ for (topLevelNode in level1Nodes)
             leftNodeRawColorIndex--
         }        
         colourIndex = leftNodeRawColorIndex % numberColors
+		leftNodeCount++
+		currentNodeCount = leftNodeCount
     }
     else
     {
         rightNodeRawColorIndex++
         colourIndex = rightNodeRawColorIndex % numberColors
+		rightNodeCount++
+		currentNodeCount = rightNodeCount
     }
     
+	setCloud(topLevelNode, addClouds, currentNodeCount)
+	
     def colorSet = colorPalette[colourIndex]
     
     def parentNodeShapes = [(root.id):NodeStyleModel.STYLE_FORK]
