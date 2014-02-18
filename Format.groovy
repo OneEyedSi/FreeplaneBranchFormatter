@@ -1,3 +1,5 @@
+// @ExecutionModes({ON_SINGLE_NODE})
+
 import org.freeplane.features.edge.EdgeStyle
 import org.freeplane.features.nodestyle.NodeStyleModel
 import org.freeplane.features.nodestyle.mindmapmode.MNodeStyleController
@@ -184,7 +186,8 @@ def applyLevelStyles = true
 def rootColorIndex = 5
 def firstNodeColorIndex = 6
 def colorSequence = ColorSequence.WHEEL
-def addClouds = false
+def addClouds = true
+def clearSubClouds = true
 
 def colorPalette = colorPalettes[selectedColorPalette]
 def numberColors = colorPalette.size
@@ -399,6 +402,11 @@ for (topLevelNode in level1Nodes)
         {
             applyLevelStyle(branchNode)
         }
+		
+		if (clearSubClouds && branchNode != topLevelNode)
+		{
+			NodeCloud.clearCloud(branchNode)
+		}
         
         def currentNodeShape = NodeShape.getShapeStyle(branchNode)
         if (currentNodeShape == NodeStyleModel.SHAPE_AS_PARENT)
