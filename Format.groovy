@@ -11,6 +11,36 @@ import org.freeplane.plugin.script.proxy.Proxy
 import org.freeplane.features.cloud.CloudController
 import org.freeplane.features.cloud.mindmapmode.MCloudController
 
+// Simple structures and enums:
+
+class ColorSet
+{
+    String title
+    String backgroundColorCode
+    String textColorCode
+    String edgeColorCode
+}
+
+enum ColorSequence
+{
+    COLUMNS,
+    WHEEL
+}
+
+class FormatSelection
+{
+	def colorPalette = []
+	boolean applyLevelStyles
+	// Color indices are zero-based.
+	int rootColorIndex
+	int topRightNodeColorIndex
+	ColorSequence colorSequence
+	boolean addBranchClouds
+	boolean clearSubClouds
+}
+
+// Helper classes that perform specific formatting actions:
+
 class NodeShape
 {
     static String getShapeStyle(Proxy.Node nodeToRead)
@@ -47,35 +77,56 @@ class NodeShape
 
 class NodeCloud
 {
-	static void clearCloud(Proxy.Node node)
+	static void clearCloud(Proxy.Node nodeToFormat)
 	{
-		setCloud(node, false)
+		setCloud(nodeToFormat, false)
 	}
 	
-	static void setCloud(Proxy.Node node)
+	static void setCloud(Proxy.Node nodeToFormat)
 	{
-		setCloud(node, true)
+		setCloud(nodeToFormat, true)
 	}
 
 	// Set to true to add a cloud, false to remove a cloud from selected node.
 	//	Is idempotent: Attempting to add a cloud if one already exists, or 
 	//	remove one if no cloud exists, has no effect (doesn't add second 
 	//	cloud and causes no error).	
-	static void setCloud (Proxy.Node node, enableCloud)
+	static void setCloud (Proxy.Node nodeToFormat, enableCloud)
     {
 		final MCloudController cloudController = 
 			(MCloudController) CloudController.getController()
-		cloudController.setCloud(node.delegate, enableCloud)
+		cloudController.setCloud(nodeToFormat.delegate, enableCloud)
     }
 }
 
-class ColorSet
+class NodeFormat
 {
-    String title;
-    String backgroundColorCode;
-    String textColorCode;
-    String edgeColorCode;
+	static void clearNodeFormatting(Proxy.Node nodeToFormat)
+	{
+		NodeShape.resetShapeStyle(nodeToFormat)
+		
+		def nodeStyle = nodeToFormat.style
+		def nodeEdge = nodeStyle.edge
+		def nodeFont = nodeStyle.font
+		
+		nodeStyle.backgroundColorCode = null
+		nodeStyle.floating = false
+		nodeStyle.maxNodeWidth = -1
+		nodeStyle.minNodeWidth = -1
+		nodeStyle.name = null
+		nodeStyle.textColorCode = null
+
+		nodeEdge.colorCode = null
+		nodeEdge.width = -1
+
+		nodeFont.resetBold()
+		nodeFont.resetItalic()
+		nodeFont.resetName()
+		nodeFont.resetSize()
+	}
 }
+
+// Colour palettes:
 
 def colorPalette0 = [new ColorSet(title:"brown", backgroundColorCode:"#cc9900", textColorCode:"#000000", 
                                 edgeColorCode:"#8b4513"), 
@@ -168,60 +219,22 @@ def colorPalette1 = [new ColorSet(title:"purple", backgroundColorCode:"#c898ff",
                                 edgeColorCode:"#ff8ebc"), 
                   new ColorSet(title:"dark magenta", backgroundColorCode:"#b863a7", textColorCode:"#ffffff", 
                                 edgeColorCode:"#fa98ff")]
+
+def colorPalettes = ["Resistor Rainbow":colorPalette0, "Pastels":colorPalette1]
+
+// Invariant colours:
+
 def forkTextColorCode = "#000000"
-def forkBackgroundColorCode = null  // Transparent - will pick up map background colour
+def forkBackgroundColorCode = null	// Transparent
 def mapBackgroundColorCode = "#ffffdb"
 def rootTextColorCode = "#000000"
-def colorPalettes = [colorPalette0, colorPalette1]
 
-enum ColorSequence
+// Formatting functions:
+
+// Applies appropriate style to a node based on its level.
+void applyLevelStyle(Proxy.Node nodeToFormat)
 {
-    COLUMNS,
-    WHEEL
-}
-
-def selectedColorPalette = 1
-def applyLevelStyles = true
-// Color indices are zero-based.
-def rootColorIndex = 5
-def firstNodeColorIndex = 6
-def colorSequence = ColorSequence.WHEEL
-def addClouds = true
-def clearSubClouds = true
-
-def colorPalette = colorPalettes[selectedColorPalette]
-def numberColors = colorPalette.size
-
-rootColorIndex = rootColorIndex % numberColors
-firstNodeColorIndex = firstNodeColorIndex % numberColors
-
-def void clearNodeFormatting(Proxy.Node nodeToFormat)
-{
-    NodeShape.resetShapeStyle(nodeToFormat)
-    
-    def nodeStyle = nodeToFormat.style
-    def nodeEdge = nodeStyle.edge
-    def nodeFont = nodeStyle.font
-    
-    nodeStyle.backgroundColorCode = null
-    nodeStyle.floating = false
-    nodeStyle.maxNodeWidth = -1
-    nodeStyle.minNodeWidth = -1
-    nodeStyle.name = null
-    nodeStyle.textColorCode = null
-
-    nodeEdge.colorCode = null
-    nodeEdge.width = -1
-
-    nodeFont.resetBold()
-    nodeFont.resetItalic()
-    nodeFont.resetName()
-    nodeFont.resetSize()
-}
-
-def void applyLevelStyle(Proxy.Node nodeToFormat)
-{
-    clearNodeFormatting(nodeToFormat)
+    NodeFormat.clearNodeFormatting(nodeToFormat)
     
     boolean countHidden = true
     int nodeLevel = nodeToFormat.getNodeLevel(countHidden)
@@ -289,7 +302,17 @@ def void applyLevelStyle(Proxy.Node nodeToFormat)
 	nodeEdge.width = edgeWidth
 }
 
-def int getLeftNodesColorOffset(int numberColors)
+// Determines the colour offset of the top-most branch on the left side of 
+//	the root when the colorSequence is set to COLUMNS.  
+//	Remarks: The offset is from the colour index of the top right branch.  The 
+// 	palettes have been arranged into two equally-sized sub-palettes, one of 
+//	lighter colours and the other of corresponding darker colours.  When 
+//	colourSequence COLUMNS is selected then the colours of matching branches 
+//	on the left and right sides of the root will be complementary.  eg If the 
+//	second branch down on the right is red, then the second branch down on the 
+//	left will be dark red.  If the fifth branch down on the right is dark 
+//	yellow then the fifth branch down on the left will be yellow.
+int getLeftNodesColumnsColorOffset(int numberColors)
 {
     def isEven = (numberColors % 2 == 0)
     if (isEven)
@@ -300,7 +323,8 @@ def int getLeftNodesColorOffset(int numberColors)
     return (int)(numberColors / 2) + 1
 }
 
-def void setRootColor(rootNode, colorPalette, rootColorIndex, 
+// Sets the colour of the root node.
+void setRootColor(rootNode, colorPalette, rootColorIndex, 
     rootTextColorCode)
 {
     def colorSet = colorPalette[rootColorIndex]
@@ -309,42 +333,13 @@ def void setRootColor(rootNode, colorPalette, rootColorIndex,
     rootNode.style.textColorCode = rootTextColorCode
 }
 
-def root = node.map.root
-def level1Nodes = root.children
-def numberLevel1Nodes = level1Nodes.size
-
-if (applyLevelStyles)
+// Sets or clears a cloud on a branch (ie top-level node) depending on whether 
+//	the branch is an odd or even numbered one (counting from the top on either 
+//	side of the root node.  Top-most branch on either side will not have a 
+//	cloud, second branch down will have a cloud, and so on).
+void setBranchCloud(topLevelNode, addBranchClouds, currentNodeCount)
 {
-    applyLevelStyle(root)
-}
-
-setRootColor(root, colorPalette, rootColorIndex, rootTextColorCode)
-
-// Order that nodes are returned in may jump from right side of root to left 
-//  and back again.  However, on each side the nodes are always returned in 
-//  descending order, from top to bottom.  So keep track of the node counts 
-//  on each side separately.
-def rightNodeRawColorIndex = 0
-def leftNodeRawColorIndex = 0
-if (colorSequence == ColorSequence.COLUMNS)
-{
-    rightNodeRawColorIndex = firstNodeColorIndex
-    leftNodeRawColorIndex = firstNodeColorIndex + getLeftNodesColorOffset(numberColors)
-}
-else
-{
-    rightNodeRawColorIndex = firstNodeColorIndex
-    leftNodeRawColorIndex = rightNodeRawColorIndex + numberLevel1Nodes + 1
-}
-
-// Increment color indices at start of each loop so step back 1 before start to 
-//	ensure they start at the correct index.
-rightNodeRawColorIndex--
-leftNodeRawColorIndex--
-
-void setCloud(topLevelNode, addClouds, currentNodeCount)
-{
-    if (!addClouds)
+    if (!addBranchClouds)
 	{
 		return
 	}
@@ -362,6 +357,55 @@ void setCloud(topLevelNode, addClouds, currentNodeCount)
 	}
 }
 
+// User's selection:
+
+FormatSelection formatSelection = new FormatSelection(
+	colorPalette:colorPalettes["Pastels"], applyLevelStyles:true, 
+	rootColorIndex:7, topRightNodeColorIndex:1, 
+	colorSequence:ColorSequence.WHEEL, 
+	addBranchClouds:true, clearSubClouds:true)
+
+// Apply selected formatting:
+
+def numberColors = formatSelection.colorPalette.size
+
+formatSelection.rootColorIndex = formatSelection.rootColorIndex % numberColors
+formatSelection.topRightNodeColorIndex = formatSelection.topRightNodeColorIndex % numberColors
+
+def root = node.map.root
+def level1Nodes = root.children
+def numberLevel1Nodes = level1Nodes.size
+
+if (formatSelection.applyLevelStyles)
+{
+    applyLevelStyle(root)
+}
+
+setRootColor(root, formatSelection.colorPalette, 
+	formatSelection.rootColorIndex, rootTextColorCode)
+
+// Order that nodes are returned in may jump from right side of root to left 
+//  and back again.  However, on each side the nodes are always returned in 
+//  descending order, from top to bottom.  So keep track of the node counts 
+//  on each side separately.
+def rightNodeRawColorIndex = 0
+def leftNodeRawColorIndex = 0
+if (formatSelection.colorSequence == ColorSequence.COLUMNS)
+{
+    rightNodeRawColorIndex = formatSelection.topRightNodeColorIndex
+    leftNodeRawColorIndex = formatSelection.topRightNodeColorIndex + getLeftNodesColumnsColorOffset(numberColors)
+}
+else
+{
+    rightNodeRawColorIndex = formatSelection.topRightNodeColorIndex
+    leftNodeRawColorIndex = rightNodeRawColorIndex + numberLevel1Nodes + 1
+}
+
+// Increment colour indices at start of each loop so step back 1 before start 
+//	to ensure they start at the correct index.
+rightNodeRawColorIndex--
+leftNodeRawColorIndex--
+
 def leftNodeCount = -1
 def rightNodeCount = -1
 def currentNodeCount = -1
@@ -370,7 +414,7 @@ for (topLevelNode in level1Nodes)
 {
     if (topLevelNode.left)
     {
-        if (colorSequence == ColorSequence.COLUMNS)
+        if (formatSelection.colorSequence == ColorSequence.COLUMNS)
         {
             leftNodeRawColorIndex++
         }
@@ -390,20 +434,20 @@ for (topLevelNode in level1Nodes)
 		currentNodeCount = rightNodeCount
     }
     
-	setCloud(topLevelNode, addClouds, currentNodeCount)
+	setBranchCloud(topLevelNode, formatSelection.addBranchClouds, currentNodeCount)
 	
-    def colorSet = colorPalette[colourIndex]
+    def colorSet = formatSelection.colorPalette[colourIndex]
     
     def parentNodeShapes = [(root.id):NodeStyleModel.STYLE_FORK]
     branchNodes = topLevelNode.findAll()
     for (branchNode in branchNodes)
     {
-        if (applyLevelStyles)
+        if (formatSelection.applyLevelStyles)
         {
             applyLevelStyle(branchNode)
         }
 		
-		if (clearSubClouds && branchNode != topLevelNode)
+		if (formatSelection.clearSubClouds && branchNode != topLevelNode)
 		{
 			NodeCloud.clearCloud(branchNode)
 		}
@@ -414,7 +458,7 @@ for (topLevelNode in level1Nodes)
            currentNodeShape = parentNodeShapes[branchNode.parent.id]
         }
         // COMBINED style: Bubble when folded, fork when unfolded.
-        // Use FORK formatting so when folded will be white background, black 
+        // Use FORK formatting so when folded will be map background, black 
         // text and a coloured border around the bubble.
         else if (currentNodeShape == NodeStyleModel.SHAPE_COMBINED)
         {
