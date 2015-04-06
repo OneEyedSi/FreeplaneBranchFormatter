@@ -341,6 +341,7 @@ void setBranchCloud(topLevelNode, addBranchClouds, currentNodeCount)
 {
     if (!addBranchClouds)
 	{
+		NodeCloud.clearCloud(topLevelNode)
 		return
 	}
 	
@@ -361,9 +362,9 @@ void setBranchCloud(topLevelNode, addBranchClouds, currentNodeCount)
 
 FormatSelection formatSelection = new FormatSelection(
 	colorPalette:colorPalettes["Pastels"], applyLevelStyles:true, 
-	rootColorIndex:7, topRightNodeColorIndex:1, 
+	rootColorIndex:7, topRightNodeColorIndex:0, 
 	colorSequence:ColorSequence.WHEEL, 
-	addBranchClouds:true, clearSubClouds:true)
+	addBranchClouds:false, clearSubClouds:false)
 
 // Apply selected formatting:
 
