@@ -37,6 +37,7 @@ class FormatSelection
 	ColorSequence colorSequence
 	boolean addBranchClouds
 	boolean clearSubClouds
+	boolean preserveFomattingForCodeSamples
 }
 
 // Helper classes that perform specific formatting actions:
@@ -222,29 +223,41 @@ def colorPalette1 = [new ColorSet(title:"purple", backgroundColorCode:"#c898ff",
 
 def colorPalettes = ["Resistor Rainbow":colorPalette0, "Pastels":colorPalette1]
 
-// Invariant colours:
+// Invariant colours and values:
 
 def forkTextColorCode = "#000000"
 def forkBackgroundColorCode = null	// Transparent
 def mapBackgroundColorCode = "#ffffdb"
 def rootTextColorCode = "#000000"
+def codeBackgroundColorCode = "#ededed"
+def defaultFontName = "SansSerif"
+def codeFontName = "Consolas"
 
 // Formatting functions:
 
 // Applies appropriate style to a node based on its level.
-void applyLevelStyle(Proxy.Node nodeToFormat)
+void applyLevelStyle(Proxy.Node nodeToFormat, boolean formatNodeForCodeSample, 
+	String fontNameDefault, String fontNameForCodeSamples)
 {
-    NodeFormat.clearNodeFormatting(nodeToFormat)
+	NodeFormat.clearNodeFormatting(nodeToFormat)
     
     boolean countHidden = true
     int nodeLevel = nodeToFormat.getNodeLevel(countHidden)
     
-    def fontName = "SansSerif"
+    def fontName = fontNameDefault
     def fontSize = 10
     def fontIsBold = false
     def nodeShape = NodeStyleModel.STYLE_FORK
 	def edgeType = EdgeStyle.EDGESTYLE_BEZIER
 	def edgeWidth = 1
+	
+	// Node formatting will have been cleared before this function was called 
+	//	so will have to reset font for node that contained code sample.
+	if (formatNodeForCodeSample)
+	{
+		fontName = fontNameForCodeSamples
+	}
+	
     switch(nodeLevel)
     {
         case 0: // root
@@ -291,7 +304,7 @@ void applyLevelStyle(Proxy.Node nodeToFormat)
     }
     
     def nodeFont = nodeToFormat.style.font
-    nodeFont.name = fontName 
+	nodeFont.name = fontName 
     nodeFont.size = fontSize 
     nodeFont.bold = fontIsBold
     
@@ -358,13 +371,38 @@ void setBranchCloud(topLevelNode, addBranchClouds, currentNodeCount)
 	}
 }
 
+// Determines whether the node should be formatted for code samples 
+//	(mono-spaced font, with grey background if the node style is FORK).
+// Remarks: This function must be called before NodeFormat.clearNodeFormatting 
+//	as it uses the original formatting of the node to determine whether 
+//	it was previously formatted for code samples.
+boolean isNodeFormattedForCodeSample(Proxy.Node nodeToFormat, 
+	boolean preserveFomattingForCodeSamples, String fontNameForCodeSamples)
+{
+	if (!preserveFomattingForCodeSamples)
+	{
+		return false;
+	}
+	
+	// Use original font name for node (before reformatting) to determine 
+	//	whether it was previously formatted for a code sample.
+	// TODO: Smarter check would be to see if node had mono-spaced font.
+	//	For ideas see:
+	//	http://stackoverflow.com/questions/922052/testing-whether-a-font-is-monospaced-in-java 
+	//	https://www.java.net/node/670129
+	//	http://docs.oracle.com/javase/7/docs/api/java/awt/Font.html
+	def originalNodeFontName = nodeToFormat.style.font.name
+	return (originalNodeFontName.toLowerCase() == fontNameForCodeSamples.toLowerCase())
+}
+
 // User's selection:
 
 FormatSelection formatSelection = new FormatSelection(
 	colorPalette:colorPalettes["Pastels"], applyLevelStyles:true, 
 	rootColorIndex:7, topRightNodeColorIndex:0, 
 	colorSequence:ColorSequence.WHEEL, 
-	addBranchClouds:false, clearSubClouds:false)
+	addBranchClouds:false, clearSubClouds:false, 
+	preserveFomattingForCodeSamples:true)
 
 // Apply selected formatting:
 
@@ -377,9 +415,14 @@ def root = node.map.root
 def level1Nodes = root.children
 def numberLevel1Nodes = level1Nodes.size
 
+def formatNodeForCodeSample = false
+
 if (formatSelection.applyLevelStyles)
 {
-    applyLevelStyle(root)
+	formatNodeForCodeSample = isNodeFormattedForCodeSample(root, 
+								formatSelection.preserveFomattingForCodeSamples, codeFontName)
+	NodeFormat.clearNodeFormatting(root)
+    applyLevelStyle(root, formatNodeForCodeSample, defaultFontName, codeFontName)
 }
 
 setRootColor(root, formatSelection.colorPalette, 
@@ -443,9 +486,13 @@ for (topLevelNode in level1Nodes)
     branchNodes = topLevelNode.findAll()
     for (branchNode in branchNodes)
     {
+		formatNodeForCodeSample = false
         if (formatSelection.applyLevelStyles)
         {
-            applyLevelStyle(branchNode)
+			formatNodeForCodeSample = isNodeFormattedForCodeSample(branchNode, 
+										formatSelection.preserveFomattingForCodeSamples, codeFontName)
+			NodeFormat.clearNodeFormatting(branchNode)
+            applyLevelStyle(branchNode, formatNodeForCodeSample, defaultFontName, codeFontName)
         }
 		
 		if (formatSelection.clearSubClouds && branchNode != topLevelNode)
@@ -472,9 +519,18 @@ for (topLevelNode in level1Nodes)
             branchNode.style.backgroundColorCode = colorSet.backgroundColorCode
             branchNode.style.textColorCode = colorSet.textColorCode
         }
-        else
+		else
         {
-            branchNode.style.backgroundColorCode = forkBackgroundColorCode
+			// For code samples, only apply codeBackgroundColorCode to FORK nodes.  
+			//	BUBBLE nodes just use the normal background colour for that branch.
+			if (formatNodeForCodeSample)
+			{
+				branchNode.style.backgroundColorCode = codeBackgroundColorCode
+			}
+			else
+			{
+				branchNode.style.backgroundColorCode = forkBackgroundColorCode
+			}
             branchNode.style.textColorCode = forkTextColorCode
         }
         
