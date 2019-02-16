@@ -2,11 +2,10 @@
 
 import org.freeplane.features.edge.EdgeStyle
 import org.freeplane.features.nodestyle.NodeStyleModel
-import org.freeplane.features.nodestyle.mindmapmode.MNodeStyleController
 import org.freeplane.features.mode.Controller
 import org.freeplane.features.mode.ModeController
-import org.freeplane.features.nodestyle.NodeBorderModel
 import org.freeplane.features.nodestyle.NodeStyleController
+import org.freeplane.features.nodestyle.mindmapmode.MNodeStyleController
 import org.freeplane.plugin.script.proxy.Proxy
 
 import org.freeplane.features.cloud.CloudController
@@ -47,13 +46,23 @@ class FormatSelection
 // Helper classes that perform specific formatting actions:
 // ************************************************************************************************
 
+class ControllerUtils
+{
+	static MNodeStyleController getMNodeStyleController()
+	{
+        final ModeController modeController = Controller.getCurrentModeController()
+        final MNodeStyleController styleController = 
+            (MNodeStyleController) modeController.getExtension(NodeStyleController.class)
+		
+		return styleController
+	}
+}
+
 class NodeShape
 {
     static NodeStyleModel.Shape getShapeStyle(Proxy.Node nodeToRead)
     {
-        final ModeController modeController = Controller.getCurrentModeController()
-        final MNodeStyleController styleController = 
-            (MNodeStyleController) modeController.getExtension(NodeStyleController.class)
+        final MNodeStyleController styleController = ControllerUtils.getMNodeStyleController()
         return styleController.getShape(nodeToRead.delegate)
     }
 
@@ -74,9 +83,7 @@ class NodeShape
         
     static void setShapeStyle(Proxy.Node nodeToSet, NodeStyleModel.Shape style)
     {
-        final ModeController modeController = Controller.getCurrentModeController()
-        final MNodeStyleController styleController = 
-            (MNodeStyleController) modeController.getExtension(NodeStyleController.class);
+        final MNodeStyleController styleController = ControllerUtils.getMNodeStyleController()
         styleController.setShape(nodeToSet.delegate, style)
     }
 }
@@ -129,6 +136,14 @@ class NodeFormat
 		nodeFont.resetItalic()
 		nodeFont.resetName()
 		nodeFont.resetSize()
+	}
+	
+	static void setNodeBorderWidthMatchesEdgeWidth(Proxy.Node nodeToFormat, 
+		Boolean borderWidthMatchesEdgeWidth)
+	{
+		final MNodeStyleController styleController = ControllerUtils.getMNodeStyleController()
+		styleController.setBorderWidthMatchesEdgeWidth(nodeToFormat.delegate, 
+			borderWidthMatchesEdgeWidth)
 	}
 }
 
@@ -572,6 +587,8 @@ for (topLevelNode in level1Nodes)
         }
 		else
         {
+			NodeFormat.setNodeBorderWidthMatchesEdgeWidth(branchNode, true)
+			
 			// For code samples, only apply codeBackgroundColorCode to FORK nodes.  
 			//	BUBBLE nodes just use the normal background colour for that branch.
 			if (formatNodeForCodeSample)
