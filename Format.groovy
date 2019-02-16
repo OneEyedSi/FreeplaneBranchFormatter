@@ -5,13 +5,16 @@ import org.freeplane.features.nodestyle.NodeStyleModel
 import org.freeplane.features.nodestyle.mindmapmode.MNodeStyleController
 import org.freeplane.features.mode.Controller
 import org.freeplane.features.mode.ModeController
+import org.freeplane.features.nodestyle.NodeBorderModel
 import org.freeplane.features.nodestyle.NodeStyleController
 import org.freeplane.plugin.script.proxy.Proxy
 
 import org.freeplane.features.cloud.CloudController
 import org.freeplane.features.cloud.mindmapmode.MCloudController
 
+// ************************************************************************************************
 // Simple structures and enums:
+// ************************************************************************************************
 
 class ColorSet
 {
@@ -40,7 +43,9 @@ class FormatSelection
 	boolean preserveFomattingForCodeSamples
 }
 
+// ************************************************************************************************
 // Helper classes that perform specific formatting actions:
+// ************************************************************************************************
 
 class NodeShape
 {
@@ -127,7 +132,9 @@ class NodeFormat
 	}
 }
 
+// ************************************************************************************************
 // Colour palettes:
+// ************************************************************************************************
 
 def colorPalette0 = [new ColorSet(title:"brown", backgroundColorCode:"#cc9900", textColorCode:"#000000", 
                                 edgeColorCode:"#8b4513"), 
@@ -223,7 +230,9 @@ def colorPalette1 = [new ColorSet(title:"purple", backgroundColorCode:"#c898ff",
 
 def colorPalettes = ["Resistor Rainbow":colorPalette0, "Pastels":colorPalette1]
 
+// ************************************************************************************************
 // Invariant colours and values:
+// ************************************************************************************************
 
 def forkTextColorCode = "#000000"
 def forkBackgroundColorCode = null	// Transparent
@@ -233,7 +242,9 @@ def codeBackgroundColorCode = "#ededed"
 def defaultFontName = "SansSerif"
 def codeFontName = "Consolas"
 
+// ************************************************************************************************
 // Formatting functions:
+// ************************************************************************************************
 
 // Applies appropriate style to a node based on its level.
 void applyLevelStyle(Proxy.Node nodeToFormat, boolean formatNodeForCodeSample, 
@@ -314,6 +325,12 @@ void applyLevelStyle(Proxy.Node nodeToFormat, boolean formatNodeForCodeSample,
 	def nodeEdge = nodeToFormat.style.edge
 	nodeEdge.type = edgeType
 	nodeEdge.width = edgeWidth
+	
+	//if (nodeShape == NodeStyleModel.Shape.fork)
+	//{
+	//	def nodeBorder = NodeBorderModel.getModel(nodeToFormat)
+	//	nodeBorder.BorderWidthMatchesEdgeWidth = true
+	//}
 }
 
 // Determines the colour offset of the top-most branch on the left side of 
@@ -396,16 +413,22 @@ boolean isNodeFormattedForCodeSample(Proxy.Node nodeToFormat,
 	return (originalNodeFontName.toLowerCase() == fontNameForCodeSamples.toLowerCase())
 }
 
+// ************************************************************************************************
+// Main script:
+// ************************************************************************************************
+
 // User's selection:
 
 FormatSelection formatSelection = new FormatSelection(
 	colorPalette:colorPalettes["Pastels"], applyLevelStyles:true, 
 	rootColorIndex:7, topRightNodeColorIndex:0, 
 	colorSequence:ColorSequence.WHEEL, 
-	addBranchClouds:false, clearSubClouds:false, 
+	addBranchClouds:true, clearSubClouds:false, 
 	preserveFomattingForCodeSamples:true)
 
 // Apply selected formatting:
+
+def forkNodeBackgroundColor = mapBackgroundColorCode
 
 def numberColors = formatSelection.colorPalette.size
 
@@ -484,6 +507,10 @@ for (topLevelNode in level1Nodes)
     def colorSet = formatSelection.colorPalette[colourIndex]
     
     def parentNodeShapes = [(root.id):NodeStyleModel.Shape.fork]
+	
+	HashMap<String, String> nodeCloudColourCodes = new HashMap<String, String>()
+	// Depth-first traverse of all nodes in the branch rooted on the top-level node.  The 
+	//	first node in the collection is the root node of the branch (ie the top-level node).
     branchNodes = topLevelNode.findAll()
     for (branchNode in branchNodes)
     {
@@ -500,7 +527,30 @@ for (topLevelNode in level1Nodes)
 		{
 			NodeCloud.clearCloud(branchNode)
 		}
-        
+        		
+		// Previously, in the Freeplane 1.3 version of this script, setting the background 
+		//	colour of fork nodes to null was sufficient to make them transparent and pick up the 
+		//	map or cloud colour.  However, now setting the background colour to null will set the 
+		//	colour to the default style background colour, if the default style is applied.  
+		// Rather than trying to manipulate styles, let's just explicitly set the background 
+		//	colour of the node to the cloud colour, if it's set, or the map background colour if 
+		//	the node is not enclosed in a cloud.
+		
+		// Record the colour of the inner-most cloud the node is enclosed by.  Need to do this 
+		//	for every node, not just the fork nodes, as we can only read the cloud colour on the 
+		//	node the cloud is defined on.  We'll need to remember that colour and apply it to 
+		//	all descendant nodes of the node with the cloud.
+		def nodeCloudColourCode = branchNode.cloud.colorCode
+		if (!nodeCloudColourCode)
+		{
+			def parentNode = branchNode.parent
+			if (parentNode && nodeCloudColourCodes.containsKey(parentNode.id))
+			{
+				nodeCloudColourCode = nodeCloudColourCodes.get(parentNode.id)
+			}
+		}
+		nodeCloudColourCodes.put(branchNode.id, nodeCloudColourCode)		
+				
         def currentNodeShape = NodeShape.getShapeStyle(branchNode)
         if (currentNodeShape == NodeStyleModel.Shape.as_parent)
         {
@@ -514,7 +564,7 @@ for (topLevelNode in level1Nodes)
            currentNodeShape = NodeStyleModel.Shape.fork
         }
         
-        branchNode.style.edge.colorCode = colorSet.edgeColorCode
+		branchNode.style.edge.colorCode = colorSet.edgeColorCode
         if (currentNodeShape == NodeStyleModel.Shape.bubble)
         {
             branchNode.style.backgroundColorCode = colorSet.backgroundColorCode
@@ -530,6 +580,11 @@ for (topLevelNode in level1Nodes)
 			}
 			else
 			{
+				forkBackgroundColorCode = mapBackgroundColorCode
+				if (nodeCloudColourCode)
+				{
+					forkBackgroundColorCode = nodeCloudColourCode
+				}
 				branchNode.style.backgroundColorCode = forkBackgroundColorCode
 			}
             branchNode.style.textColorCode = forkTextColorCode
