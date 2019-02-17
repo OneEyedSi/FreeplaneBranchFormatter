@@ -11,6 +11,12 @@ import org.freeplane.plugin.script.proxy.Proxy
 import org.freeplane.features.cloud.CloudController
 import org.freeplane.features.cloud.mindmapmode.MCloudController
 
+// Needed for isFontMonoSpaced
+import java.awt.Font
+import java.awt.font.FontRenderContext
+import java.awt.geom.Rectangle2D
+import java.awt.RenderingHints
+
 // ************************************************************************************************
 // Simple structures and enums:
 // ************************************************************************************************
@@ -340,12 +346,6 @@ void applyLevelStyle(Proxy.Node nodeToFormat, boolean formatNodeForCodeSample,
 	def nodeEdge = nodeToFormat.style.edge
 	nodeEdge.type = edgeType
 	nodeEdge.width = edgeWidth
-	
-	//if (nodeShape == NodeStyleModel.Shape.fork)
-	//{
-	//	def nodeBorder = NodeBorderModel.getModel(nodeToFormat)
-	//	nodeBorder.BorderWidthMatchesEdgeWidth = true
-	//}
 }
 
 // Determines the colour offset of the top-most branch on the left side of 
@@ -404,7 +404,43 @@ void setBranchCloud(topLevelNode, addBranchClouds, currentNodeCount)
 	}
 }
 
-// Determines whether the node should be formatted for code samples 
+// Determines whether specified font is mono-spaced or not (used to determine whether node 
+//	is formatted for code samples.
+// Based on Stackoverflow answer https://stackoverflow.com/a/17215863/216440 to 
+//	question https://stackoverflow.com/questions/922052/testing-whether-a-font-is-monospaced-in-java
+boolean isFontMonoSpaced(String fontName, String fontNameForCodeSamples)
+{
+	// Get font at 12 point to avoid errors where character widths for non-mono-spaced fonts 
+	//	for narrow and wide characters appear the same at small point sizes.
+	// eg GraphicsEnvironment.getLocalGraphicsEnvironment().getAllFonts() returns fonts at 
+	//	1 point size and about 15% of fonts will appear to be mono-spaced at that size when they 
+	//	really aren't.
+	Font specifiedFont = Font.decode(fontName + "-12")	
+	
+	// Fall back to less accurate method if can't find font.  This should never happen, see note 
+	//	below about "Dialog" font family, but let's be careful in case Java changes things.
+	if (!specifiedFont)
+	{
+		return (fontName.toLowerCase() == fontNameForCodeSamples.toLowerCase())
+	}
+
+	// If font name not found on system, JavaDocs say Font.decode will return a font from the 
+	//	font family "Dialog".
+	if (specifiedFont.fontName.toLowerCase() != fontName.toLowerCase())
+	{
+		return (fontName.toLowerCase() == fontNameForCodeSamples.toLowerCase())
+	}
+
+	FontRenderContext frc = new FontRenderContext(null, 
+		RenderingHints.VALUE_TEXT_ANTIALIAS_DEFAULT, RenderingHints.VALUE_FRACTIONALMETRICS_DEFAULT)
+	Rectangle2D iBounds = specifiedFont.getStringBounds("i", frc)
+	Rectangle2D spaceBounds = specifiedFont.getStringBounds(" ", frc)
+	Rectangle2D mBounds = specifiedFont.getStringBounds("m", frc)
+	
+	return ((iBounds.width == mBounds.width) && (spaceBounds.width == mBounds.width))
+}
+
+// Determines whether the node is formatted for code samples 
 //	(mono-spaced font, with grey background if the node style is FORK).
 // Remarks: This function must be called before NodeFormat.clearNodeFormatting 
 //	as it uses the original formatting of the node to determine whether 
@@ -416,16 +452,9 @@ boolean isNodeFormattedForCodeSample(Proxy.Node nodeToFormat,
 	{
 		return false;
 	}
-	
-	// Use original font name for node (before reformatting) to determine 
-	//	whether it was previously formatted for a code sample.
-	// TODO: Smarter check would be to see if node had mono-spaced font.
-	//	For ideas see:
-	//	http://stackoverflow.com/questions/922052/testing-whether-a-font-is-monospaced-in-java 
-	//	https://www.java.net/node/670129
-	//	http://docs.oracle.com/javase/7/docs/api/java/awt/Font.html
-	def originalNodeFontName = nodeToFormat.style.font.name
-	return (originalNodeFontName.toLowerCase() == fontNameForCodeSamples.toLowerCase())
+		
+	def nodeFontName = nodeToFormat.style.font.name
+	return isFontMonoSpaced(nodeFontName, fontNameForCodeSamples)
 }
 
 // ************************************************************************************************
@@ -438,7 +467,7 @@ FormatSelection formatSelection = new FormatSelection(
 	colorPalette:colorPalettes["Pastels"], applyLevelStyles:true, 
 	rootColorIndex:7, topRightNodeColorIndex:0, 
 	colorSequence:ColorSequence.WHEEL, 
-	addBranchClouds:true, clearSubClouds:false, 
+	addBranchClouds:false, clearSubClouds:false, 
 	preserveFomattingForCodeSamples:true)
 
 // Apply selected formatting:
