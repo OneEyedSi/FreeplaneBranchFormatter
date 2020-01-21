@@ -1,5 +1,5 @@
 // @ExecutionModes({ON_SINGLE_NODE})
-
+	
 // ************************************************************************************************
 // Revisions:
 // ----------
@@ -81,11 +81,11 @@ class FormatSelection
 class ControllerUtils
 {
     static MNodeStyleController getMNodeStyleController()
-    {
+	    {
         final ModeController modeController = Controller.getCurrentModeController()
-        final MNodeStyleController styleController = 
+	        final MNodeStyleController styleController = 
             (MNodeStyleController) modeController.getExtension(NodeStyleController.class)
-        
+	        
         return styleController
     }
 }
@@ -93,63 +93,63 @@ class ControllerUtils
 class NodeShape
 {
     static NodeStyleModel.Shape getShapeStyle(Proxy.Node nodeToRead)
-    {
+	    {
         final MNodeStyleController styleController = ControllerUtils.getMNodeStyleController()
         return styleController.getShape(nodeToRead.delegate)
-    }
+	    }
 
     static void setShapeStyleBubble (Proxy.Node nodeToSet)
-    {
+	    {
         setShapeStyle(nodeToSet, NodeStyleModel.Shape.bubble)
-    }
+	    }
 
     static void setShapeStyleFork(Proxy.Node nodeToSet)
-    {
+	    {
         setShapeStyle(nodeToSet, NodeStyleModel.Shape.fork)
-    }
+	    }
 
     static void resetShapeStyle(Proxy.Node nodeToSet)
-    {
+	    {
         setShapeStyle(nodeToSet, null)
-    }
+	    }
         
     static void setShapeStyle(Proxy.Node nodeToSet, NodeStyleModel.Shape style)
-    {
+	    {
         final MNodeStyleController styleController = ControllerUtils.getMNodeStyleController()
         styleController.setShape(nodeToSet.delegate, style)
-    }
+	    }
 }
 
 class NodeCloud
 {
     static void clearCloud(Proxy.Node nodeToFormat)
-    {
+	    {
         setCloud(nodeToFormat, false)
-    }
+	    }
     
     static void setCloud(Proxy.Node nodeToFormat)
-    {
+	    {
         setCloud(nodeToFormat, true)
-    }
+	    }
 
     // Set to true to add a cloud, false to remove a cloud from selected node.
     //    Is idempotent: Attempting to add a cloud if one already exists, or 
     //    remove one if no cloud exists, has no effect (doesn't add second 
     //    cloud and causes no error).    
     static void setCloud (Proxy.Node nodeToFormat, enableCloud)
-    {
+	    {
         final MCloudController cloudController = 
             (MCloudController) CloudController.getController()
         cloudController.setCloud(nodeToFormat.delegate, enableCloud)
-    }
+	    }
 }
 
 class NodeFormat
 {
     static void clearNodeFormatting(Proxy.Node nodeToFormat)
-    {
+	    {
         NodeShape.resetShapeStyle(nodeToFormat)
-        
+	        
         def nodeStyle = nodeToFormat.style
         def nodeEdge = nodeStyle.edge
         def nodeFont = nodeStyle.font
@@ -168,15 +168,15 @@ class NodeFormat
         nodeFont.resetItalic()
         nodeFont.resetName()
         nodeFont.resetSize()
-    }
+	    }
     
     static void setNodeBorderWidthMatchesEdgeWidth(Proxy.Node nodeToFormat, 
         Boolean borderWidthMatchesEdgeWidth)
-    {
+	    {
         final MNodeStyleController styleController = ControllerUtils.getMNodeStyleController()
-        styleController.setBorderWidthMatchesEdgeWidth(nodeToFormat.delegate, 
+	        styleController.setBorderWidthMatchesEdgeWidth(nodeToFormat.delegate, 
             borderWidthMatchesEdgeWidth)
-    }
+	    }
 }
 
 // ************************************************************************************************
@@ -289,7 +289,7 @@ FormatSelection formatSelection = new FormatSelection(
     colorSequence:ColorSequence.WHEEL, 
     addBranchClouds:false, clearSubClouds:false, 
     preserveFomattingForCodeSamples:true)
-
+	
 // ************************************************************************************************
 // Invariant colours and values:
 // ************************************************************************************************
@@ -306,15 +306,22 @@ def codeFontName = "Consolas"
 // Formatting functions:
 // ************************************************************************************************
 
+void setNodeTextToUpperCase(Proxy.Node nodeToFormat)
+	{
+	// Property name "...text" is case-sensitive.  "...Text" will result in a syntax error.
+	def text = nodeToFormat.text
+	nodeToFormat.text = text.toUpperCase()
+	}
+
 // Applies appropriate style to a node based on its level.
 void applyLevelStyle(Proxy.Node nodeToFormat, boolean formatNodeForCodeSample, 
     String fontNameDefault, String fontNameForCodeSamples)
-{
+	{
     NodeFormat.clearNodeFormatting(nodeToFormat)
-    
+	    
     boolean countHidden = true
     int nodeLevel = nodeToFormat.getNodeLevel(countHidden)
-    
+	    
     def fontName = fontNameDefault
     def fontSize = 10
     def fontIsBold = false
@@ -325,12 +332,12 @@ void applyLevelStyle(Proxy.Node nodeToFormat, boolean formatNodeForCodeSample,
     // Node formatting will have been cleared before this function was called 
     //    so will have to reset font for node that contained code sample.
     if (formatNodeForCodeSample)
-    {
+	    {
         fontName = fontNameForCodeSamples
     }
     
     switch(nodeLevel)
-    {
+	    {
         case 0: // root
             fontSize = 16
             fontIsBold = true
@@ -381,7 +388,7 @@ void applyLevelStyle(Proxy.Node nodeToFormat, boolean formatNodeForCodeSample,
     nodeFont.bold = fontIsBold
     
     NodeShape.setShapeStyle(nodeToFormat, nodeShape)
-    
+	    
     def nodeEdge = nodeToFormat.style.edge
     nodeEdge.type = edgeType
     nodeEdge.width = edgeWidth
@@ -389,7 +396,12 @@ void applyLevelStyle(Proxy.Node nodeToFormat, boolean formatNodeForCodeSample,
 	// To allow for wide images embedded in bubble nodes - default width was 10 cm.
 	if (nodeShape == NodeStyleModel.Shape.bubble)
 	{
-		nodeToFormat.style.maxNodeWidth = '20 cm'
+		nodeToFormat.style.maxNodeWidth = '30 cm'
+	}
+	
+	if (nodeLevel in [0, 1])
+	{
+		setNodeTextToUpperCase(nodeToFormat)
 	}
 }
 
@@ -404,10 +416,10 @@ void applyLevelStyle(Proxy.Node nodeToFormat, boolean formatNodeForCodeSample,
 //    left will be dark red.  If the fifth branch down on the right is dark 
 //    yellow then the fifth branch down on the left will be yellow.
 int getLeftNodesColumnsColorOffset(int numberColors)
-{
+	{
     def isEven = (numberColors % 2 == 0)
     if (isEven)
-    {
+	    {
         return numberColors / 2
     }
     
@@ -417,7 +429,7 @@ int getLeftNodesColumnsColorOffset(int numberColors)
 // Sets the colour of the root node.
 void setRootColor(rootNode, colorPalette, rootColorIndex, 
     rootTextColorCode)
-{
+	{
     def colorSet = colorPalette[rootColorIndex]
     rootNode.style.edge.colorCode = colorSet.edgeColorCode
     rootNode.style.backgroundColorCode = colorSet.backgroundColorCode
@@ -429,24 +441,24 @@ void setRootColor(rootNode, colorPalette, rootColorIndex,
 //    side of the root node.  Top-most branch on either side will not have a 
 //    cloud, second branch down will have a cloud, and so on).
 void setBranchCloud(topLevelNode, addBranchClouds, currentNodeCount)
-{
+	{
     if (!addBranchClouds)
-    {
+	    {
         NodeCloud.clearCloud(topLevelNode)
-        return
+	        return
     }
     
     def isEven = (currentNodeCount % 2 == 0)
-    
+	    
     // Add clouds only to the odd numbered nodes.
     if (isEven)
-    {
+	    {
         NodeCloud.clearCloud(topLevelNode)
-    }
+	    }
     else
     {
         NodeCloud.setCloud(topLevelNode)
-    }
+	    }
 }
 
 // Determines whether specified font is mono-spaced or not (used to determine whether node 
@@ -454,7 +466,7 @@ void setBranchCloud(topLevelNode, addBranchClouds, currentNodeCount)
 // Based on Stackoverflow answer https://stackoverflow.com/a/17215863/216440 to 
 //    question https://stackoverflow.com/questions/922052/testing-whether-a-font-is-monospaced-in-java
 boolean isFontMonoSpaced(String fontName, String fontNameForCodeSamples)
-{
+	{
     // Get font at 12 point to avoid errors where character widths for non-mono-spaced fonts 
     //    for narrow and wide characters appear the same at small point sizes.
     // eg GraphicsEnvironment.getLocalGraphicsEnvironment().getAllFonts() returns fonts at 
@@ -465,25 +477,25 @@ boolean isFontMonoSpaced(String fontName, String fontNameForCodeSamples)
     // Fall back to less accurate method if can't find font.  This should never happen, see note 
     //    below about "Dialog" font family, but let's be careful in case Java changes things.
     if (!specifiedFont)
-    {
+	    {
         return (fontName.toLowerCase() == fontNameForCodeSamples.toLowerCase())
-    }
+	    }
 
     // If font name not found on system, JavaDocs say Font.decode will return a font from the 
     //    font family "Dialog".
     if (specifiedFont.fontName.toLowerCase() != fontName.toLowerCase())
-    {
+	    {
         return (fontName.toLowerCase() == fontNameForCodeSamples.toLowerCase())
-    }
+	    }
 
     FontRenderContext frc = new FontRenderContext(null, 
         RenderingHints.VALUE_TEXT_ANTIALIAS_DEFAULT, RenderingHints.VALUE_FRACTIONALMETRICS_DEFAULT)
     Rectangle2D iBounds = specifiedFont.getStringBounds("i", frc)
     Rectangle2D spaceBounds = specifiedFont.getStringBounds(" ", frc)
     Rectangle2D mBounds = specifiedFont.getStringBounds("m", frc)
-    
+	    
     return ((iBounds.width == mBounds.width) && (spaceBounds.width == mBounds.width))
-}
+	}
 
 // Determines whether the node is formatted for code samples 
 //    (mono-spaced font, with grey background if the node style is FORK).
@@ -492,15 +504,15 @@ boolean isFontMonoSpaced(String fontName, String fontNameForCodeSamples)
 //    it was previously formatted for code samples.
 boolean isNodeFormattedForCodeSample(Proxy.Node nodeToFormat, 
     boolean preserveFomattingForCodeSamples, String fontNameForCodeSamples)
-{
+	{
     if (!preserveFomattingForCodeSamples)
-    {
+	    {
         return false;
     }
         
     def nodeFontName = nodeToFormat.style.font.name
     return isFontMonoSpaced(nodeFontName, fontNameForCodeSamples)
-}
+	}
 
 // ************************************************************************************************
 // Main script:
@@ -522,16 +534,16 @@ def numberLevel1Nodes = level1Nodes.size
 def formatNodeForCodeSample = false
 
 if (formatSelection.applyLevelStyles)
-{
+	{
     formatNodeForCodeSample = isNodeFormattedForCodeSample(root, 
                                 formatSelection.preserveFomattingForCodeSamples, codeFontName)
     NodeFormat.clearNodeFormatting(root)
     applyLevelStyle(root, formatNodeForCodeSample, defaultFontName, codeFontName)
-}
+	}
 
 setRootColor(root, formatSelection.colorPalette, 
     formatSelection.rootColorIndex, rootTextColorCode)
-
+	
 // Order that nodes are returned in may jump from right side of root to left 
 //  and back again.  However, on each side the nodes are always returned in 
 //  descending order, from top to bottom.  So keep track of the node counts 
@@ -539,10 +551,10 @@ setRootColor(root, formatSelection.colorPalette,
 def rightNodeRawColorIndex = 0
 def leftNodeRawColorIndex = 0
 if (formatSelection.colorSequence == ColorSequence.COLUMNS)
-{
+	{
     rightNodeRawColorIndex = formatSelection.topRightNodeColorIndex
     leftNodeRawColorIndex = formatSelection.topRightNodeColorIndex + getLeftNodesColumnsColorOffset(numberColors)
-}
+	}
 else
 {
     rightNodeRawColorIndex = formatSelection.topRightNodeColorIndex
@@ -559,11 +571,11 @@ def rightNodeCount = -1
 def currentNodeCount = -1
 def colourIndex = -1
 for (topLevelNode in level1Nodes)
-{
+	{
     if (topLevelNode.left)
-    {
+	    {
         if (formatSelection.colorSequence == ColorSequence.COLUMNS)
-        {
+	        {
             leftNodeRawColorIndex++
         }
         else
@@ -583,30 +595,30 @@ for (topLevelNode in level1Nodes)
     }
     
     setBranchCloud(topLevelNode, formatSelection.addBranchClouds, currentNodeCount)
-    
+	    
     def colorSet = formatSelection.colorPalette[colourIndex]
     
     def parentNodeShapes = [(root.id):NodeStyleModel.Shape.fork]
     
     HashMap<String, String> nodeCloudColourCodes = new HashMap<String, String>()
-    // Depth-first traverse of all nodes in the branch rooted on the top-level node.  The 
+	    // Depth-first traverse of all nodes in the branch rooted on the top-level node.  The 
     //    first node in the collection is the root node of the branch (ie the top-level node).
     branchNodes = topLevelNode.findAll()
     for (branchNode in branchNodes)
-    {
+	    {
         formatNodeForCodeSample = false
         if (formatSelection.applyLevelStyles)
-        {
+	        {
             formatNodeForCodeSample = isNodeFormattedForCodeSample(branchNode, 
                                         formatSelection.preserveFomattingForCodeSamples, codeFontName)
             NodeFormat.clearNodeFormatting(branchNode)
             applyLevelStyle(branchNode, formatNodeForCodeSample, defaultFontName, codeFontName)
-        }
+	        }
         
         if (formatSelection.clearSubClouds && branchNode != topLevelNode)
-        {
+	        {
             NodeCloud.clearCloud(branchNode)
-        }
+	        }
                 
         // Previously, in the Freeplane 1.3 version of this script, setting the background 
         //    colour of fork nodes to null was sufficient to make them transparent and pick up the 
@@ -622,49 +634,49 @@ for (topLevelNode in level1Nodes)
         //    all descendant nodes of the node with the cloud.
         def nodeCloudColourCode = branchNode.cloud.colorCode
         if (!nodeCloudColourCode)
-        {
+	        {
             def parentNode = branchNode.parent
             if (parentNode && nodeCloudColourCodes.containsKey(parentNode.id))
-            {
+	            {
                 nodeCloudColourCode = nodeCloudColourCodes.get(parentNode.id)
-            }
+	            }
         }
         nodeCloudColourCodes.put(branchNode.id, nodeCloudColourCode)        
                 
         def currentNodeShape = NodeShape.getShapeStyle(branchNode)
         if (currentNodeShape == NodeStyleModel.Shape.as_parent)
-        {
+	        {
            currentNodeShape = parentNodeShapes[branchNode.parent.id]
         }
         // COMBINED style: Bubble when folded, fork when unfolded.
         // Use FORK formatting so when folded will be map background, black 
         // text and a coloured border around the bubble.
         else if (currentNodeShape == NodeStyleModel.Shape.combined)
-        {
+	        {
            currentNodeShape = NodeStyleModel.Shape.fork
         }
         
         branchNode.style.edge.colorCode = colorSet.edgeColorCode
         if (currentNodeShape == NodeStyleModel.Shape.bubble)
-        {
+	        {
             branchNode.style.backgroundColorCode = colorSet.backgroundColorCode
             branchNode.style.textColorCode = colorSet.textColorCode
         }
         else
         {
             NodeFormat.setNodeBorderWidthMatchesEdgeWidth(branchNode, true)
-            
+	            
             // For code samples, only apply codeBackgroundColorCode to FORK nodes.  
             //    BUBBLE nodes just use the normal background colour for that branch.
             if (formatNodeForCodeSample)
-            {
+	            {
                 branchNode.style.backgroundColorCode = codeBackgroundColorCode
             }
             else
             {
                 forkBackgroundColorCode = mapBackgroundColorCode
                 if (nodeCloudColourCode)
-                {
+	                {
                     forkBackgroundColorCode = nodeCloudColourCode
                 }
                 branchNode.style.backgroundColorCode = forkBackgroundColorCode
