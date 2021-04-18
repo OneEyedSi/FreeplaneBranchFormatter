@@ -10,7 +10,15 @@
 //		Patch number: incremented for bug fixes and minor corrections.
 // -------------
 //
-// 2.2.0	6 Aug 2019		Simon Elms			Set bubble node max width to 20 cm so wide images 
+// 2.3.1	18 Apr 2021		Simon Elms			setNodeTextToUpperCase: Handle nodes with images 
+//												in the node core (was previously converting the 
+//												node HTML to upper case, which Freeplane wasn't 
+//												parsing).
+//
+// 2.3.0	2 Apr 2021		Simon Elms			Set non-bubble node max width to 20 cm so wide 
+//												code examples won't wrap onto next line.
+//
+// 2.2.0	6 Aug 2019		Simon Elms			Set bubble node max width to 30 cm so wide images 
 //												embedded in nodes won't be cropped.
 //
 // 2.1.0	17 Feb 2019		Simon Elms			Determine whether node is formatted for code 
@@ -308,9 +316,22 @@ def codeFontName = "Consolas"
 
 void setNodeTextToUpperCase(Proxy.Node nodeToFormat)
 	{
-	// Property name "...text" is case-sensitive.  "...Text" will result in a syntax error.
-	def text = nodeToFormat.text
-	nodeToFormat.text = text.toUpperCase()
+		// Property names are case-sensitive.  eg "node.text" works, "node.Text" will result in a syntax error.
+		
+		def text = nodeToFormat.text
+		def plainText = nodeToFormat.plainText
+		def upperCaseText = plainText.toUpperCase()
+		
+		if (text == plainText)
+		{
+			nodeToFormat.text = upperCaseText
+		}
+		else
+		{
+			def objectText = nodeToFormat.object
+			objectText = objectText.replaceAll(plainText, upperCaseText)
+			nodeToFormat.object = objectText
+		}
 	}
 
 // Applies appropriate style to a node based on its level.
@@ -328,6 +349,7 @@ void applyLevelStyle(Proxy.Node nodeToFormat, boolean formatNodeForCodeSample,
     def nodeShape = NodeStyleModel.Shape.fork
     def edgeType = EdgeStyle.EDGESTYLE_BEZIER
     def edgeWidth = 1
+	def maxNodeWidth = '20 cm' // Default width is 10 cm.  Want wider for code and images.
     
     // Node formatting will have been cleared before this function was called 
     //    so will have to reset font for node that contained code sample.
@@ -385,7 +407,7 @@ void applyLevelStyle(Proxy.Node nodeToFormat, boolean formatNodeForCodeSample,
     def nodeFont = nodeToFormat.style.font
     nodeFont.name = fontName 
     nodeFont.size = fontSize 
-    nodeFont.bold = fontIsBold
+    nodeFont.bold = fontIsBold	
     
     NodeShape.setShapeStyle(nodeToFormat, nodeShape)
 	    
@@ -393,10 +415,14 @@ void applyLevelStyle(Proxy.Node nodeToFormat, boolean formatNodeForCodeSample,
     nodeEdge.type = edgeType
     nodeEdge.width = edgeWidth
 	
-	// To allow for wide images embedded in bubble nodes - default width was 10 cm.
+	// To allow for wide images embedded in bubble nodes.
 	if (nodeShape == NodeStyleModel.Shape.bubble)
 	{
 		nodeToFormat.style.maxNodeWidth = '30 cm'
+	}
+	else
+	{
+		nodeToFormat.style.maxNodeWidth = maxNodeWidth
 	}
 	
 	if (nodeLevel in [0, 1])
