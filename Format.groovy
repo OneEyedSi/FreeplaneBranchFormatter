@@ -10,6 +10,10 @@
 //		Patch number: incremented for bug fixes and minor corrections.
 // -------------
 //
+// 2.4.0	25 Jul 2021		Simon Elms			Changes to handle Freeplane 1.9.5:
+//                                              NodeStyleModel.Shape replaced by NodeStyleShape;
+//                                              ArrayList object .size replaced by .size().
+//
 // 2.3.1	18 Apr 2021		Simon Elms			setNodeTextToUpperCase: Handle nodes with images 
 //												in the node core (was previously converting the 
 //												node HTML to upper case, which Freeplane wasn't 
@@ -405,8 +409,8 @@ void applyLevelStyle(Proxy.Node nodeToFormat, boolean formatNodeForCodeSample,
     }
     
     def nodeFont = nodeToFormat.style.font
-    nodeFont.name = fontName 
-    nodeFont.size = fontSize 
+    nodeFont.name = fontName
+    nodeFont.size = fontSize
     nodeFont.bold = fontIsBold	
     
     NodeShape.setShapeStyle(nodeToFormat, nodeShape)
@@ -548,14 +552,14 @@ boolean isNodeFormattedForCodeSample(Proxy.Node nodeToFormat,
 
 def forkNodeBackgroundColor = mapBackgroundColorCode
 
-def numberColors = formatSelection.colorPalette.size
+def numberColors = formatSelection.colorPalette.size()
 
 formatSelection.rootColorIndex = formatSelection.rootColorIndex % numberColors
 formatSelection.topRightNodeColorIndex = formatSelection.topRightNodeColorIndex % numberColors
 
 def root = node.map.root
 def level1Nodes = root.children
-def numberLevel1Nodes = level1Nodes.size
+def numberLevel1Nodes = level1Nodes.size()
 
 def formatNodeForCodeSample = false
 
