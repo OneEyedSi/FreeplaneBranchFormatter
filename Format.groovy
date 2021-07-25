@@ -35,7 +35,7 @@
 // ************************************************************************************************
 
 import org.freeplane.features.edge.EdgeStyle
-import org.freeplane.features.nodestyle.NodeStyleModel
+import org.freeplane.features.nodestyle.NodeStyleShape
 import org.freeplane.features.mode.Controller
 import org.freeplane.features.mode.ModeController
 import org.freeplane.features.nodestyle.NodeStyleController
@@ -100,7 +100,7 @@ class ControllerUtils
 
 class NodeShape
 {
-    static NodeStyleModel.Shape getShapeStyle(Proxy.Node nodeToRead)
+    static NodeStyleShape getShapeStyle(Proxy.Node nodeToRead)
 	    {
         final MNodeStyleController styleController = ControllerUtils.getMNodeStyleController()
         return styleController.getShape(nodeToRead.delegate)
@@ -108,12 +108,12 @@ class NodeShape
 
     static void setShapeStyleBubble (Proxy.Node nodeToSet)
 	    {
-        setShapeStyle(nodeToSet, NodeStyleModel.Shape.bubble)
+        setShapeStyle(nodeToSet, NodeStyleShape.bubble)
 	    }
 
     static void setShapeStyleFork(Proxy.Node nodeToSet)
 	    {
-        setShapeStyle(nodeToSet, NodeStyleModel.Shape.fork)
+        setShapeStyle(nodeToSet, NodeStyleShape.fork)
 	    }
 
     static void resetShapeStyle(Proxy.Node nodeToSet)
@@ -121,7 +121,7 @@ class NodeShape
         setShapeStyle(nodeToSet, null)
 	    }
         
-    static void setShapeStyle(Proxy.Node nodeToSet, NodeStyleModel.Shape style)
+    static void setShapeStyle(Proxy.Node nodeToSet, NodeStyleShape style)
 	    {
         final MNodeStyleController styleController = ControllerUtils.getMNodeStyleController()
         styleController.setShape(nodeToSet.delegate, style)
@@ -346,7 +346,7 @@ void applyLevelStyle(Proxy.Node nodeToFormat, boolean formatNodeForCodeSample,
     def fontName = fontNameDefault
     def fontSize = 10
     def fontIsBold = false
-    def nodeShape = NodeStyleModel.Shape.fork
+    def nodeShape = NodeStyleShape.fork
     def edgeType = EdgeStyle.EDGESTYLE_BEZIER
     def edgeWidth = 1
 	def maxNodeWidth = '20 cm' // Default width is 10 cm.  Want wider for code and images.
@@ -363,42 +363,42 @@ void applyLevelStyle(Proxy.Node nodeToFormat, boolean formatNodeForCodeSample,
         case 0: // root
             fontSize = 16
             fontIsBold = true
-            nodeShape = NodeStyleModel.Shape.oval
+            nodeShape = NodeStyleShape.oval
             edgeType = EdgeStyle.EDGESTYLE_SHARP_BEZIER
             edgeWidth = 4
             break
         case 1: 
             fontSize = 14
             fontIsBold = true
-            nodeShape = NodeStyleModel.Shape.bubble
+            nodeShape = NodeStyleShape.bubble
             edgeType = EdgeStyle.EDGESTYLE_SHARP_BEZIER
             edgeWidth = 4
             break
         case 2: 
             fontSize = 12
             fontIsBold = true
-            nodeShape = NodeStyleModel.Shape.bubble
+            nodeShape = NodeStyleShape.bubble
             edgeType = EdgeStyle.EDGESTYLE_BEZIER
             edgeWidth = 2
             break
         case 3: 
             fontSize = 12
             fontIsBold = false
-            nodeShape = NodeStyleModel.Shape.bubble
+            nodeShape = NodeStyleShape.bubble
             edgeType = EdgeStyle.EDGESTYLE_BEZIER
             edgeWidth = 2
             break
         case 4: 
             fontSize = 10
             fontIsBold = false
-            nodeShape = NodeStyleModel.Shape.bubble
+            nodeShape = NodeStyleShape.bubble
             edgeType = EdgeStyle.EDGESTYLE_BEZIER
             edgeWidth = 2
             break
         default: 
             fontSize = 10
             fontIsBold = false
-            nodeShape = NodeStyleModel.Shape.fork
+            nodeShape = NodeStyleShape.fork
             edgeType = EdgeStyle.EDGESTYLE_BEZIER
             edgeWidth = 2
             break        
@@ -416,7 +416,7 @@ void applyLevelStyle(Proxy.Node nodeToFormat, boolean formatNodeForCodeSample,
     nodeEdge.width = edgeWidth
 	
 	// To allow for wide images embedded in bubble nodes.
-	if (nodeShape == NodeStyleModel.Shape.bubble)
+	if (nodeShape == NodeStyleShape.bubble)
 	{
 		nodeToFormat.style.maxNodeWidth = '30 cm'
 	}
@@ -624,7 +624,7 @@ for (topLevelNode in level1Nodes)
 	    
     def colorSet = formatSelection.colorPalette[colourIndex]
     
-    def parentNodeShapes = [(root.id):NodeStyleModel.Shape.fork]
+    def parentNodeShapes = [(root.id):NodeStyleShape.fork]
     
     HashMap<String, String> nodeCloudColourCodes = new HashMap<String, String>()
 	    // Depth-first traverse of all nodes in the branch rooted on the top-level node.  The 
@@ -670,20 +670,20 @@ for (topLevelNode in level1Nodes)
         nodeCloudColourCodes.put(branchNode.id, nodeCloudColourCode)        
                 
         def currentNodeShape = NodeShape.getShapeStyle(branchNode)
-        if (currentNodeShape == NodeStyleModel.Shape.as_parent)
+        if (currentNodeShape == NodeStyleShape.as_parent)
 	        {
            currentNodeShape = parentNodeShapes[branchNode.parent.id]
         }
         // COMBINED style: Bubble when folded, fork when unfolded.
         // Use FORK formatting so when folded will be map background, black 
         // text and a coloured border around the bubble.
-        else if (currentNodeShape == NodeStyleModel.Shape.combined)
+        else if (currentNodeShape == NodeStyleShape.combined)
 	        {
-           currentNodeShape = NodeStyleModel.Shape.fork
+           currentNodeShape = NodeStyleShape.fork
         }
         
         branchNode.style.edge.colorCode = colorSet.edgeColorCode
-        if (currentNodeShape == NodeStyleModel.Shape.bubble)
+        if (currentNodeShape == NodeStyleShape.bubble)
 	        {
             branchNode.style.backgroundColorCode = colorSet.backgroundColorCode
             branchNode.style.textColorCode = colorSet.textColorCode
