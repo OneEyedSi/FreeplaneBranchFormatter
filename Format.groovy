@@ -10,6 +10,10 @@
 //		Patch number: incremented for bug fixes and minor corrections.
 // -------------
 //
+// 2.5.0	3 Jan 2022		Simon Elms			Changes to handle Freeplane 1.9.8:
+//												Had to add StyleOption argument to 
+//												MNodeStyleController.getShape(...).
+//
 // 2.4.0	25 Jul 2021		Simon Elms			Changes to handle Freeplane 1.9.5:
 //                                              NodeStyleModel.Shape replaced by NodeStyleShape;
 //                                              ArrayList object .size replaced by .size().
@@ -39,11 +43,12 @@
 // ************************************************************************************************
 
 import org.freeplane.features.edge.EdgeStyle
-import org.freeplane.features.nodestyle.NodeStyleShape
 import org.freeplane.features.mode.Controller
 import org.freeplane.features.mode.ModeController
 import org.freeplane.features.nodestyle.NodeStyleController
+import org.freeplane.features.nodestyle.NodeStyleShape
 import org.freeplane.features.nodestyle.mindmapmode.MNodeStyleController
+import org.freeplane.features.styles.LogicalStyleController.StyleOption
 import org.freeplane.plugin.script.proxy.Proxy
 
 import org.freeplane.features.cloud.CloudController
@@ -107,7 +112,7 @@ class NodeShape
     static NodeStyleShape getShapeStyle(Proxy.Node nodeToRead)
 	    {
         final MNodeStyleController styleController = ControllerUtils.getMNodeStyleController()
-        return styleController.getShape(nodeToRead.delegate)
+        return styleController.getShape(nodeToRead.delegate, StyleOption.FOR_UNSELECTED_NODE)
 	    }
 
     static void setShapeStyleBubble (Proxy.Node nodeToSet)
