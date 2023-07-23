@@ -10,6 +10,10 @@
 //		Patch number: incremented for bug fixes and minor corrections.
 // -------------
 //
+// 3.0.0	24 Jul 2023		Simon Elms			Rename from Format.groovy to 
+//												FormatAllBranches.groovy to make the menu item 
+//												more descriptive.
+//
 // 2.5.0	3 Jan 2022		Simon Elms			Changes to handle Freeplane 1.9.8:
 //												Had to add StyleOption argument to 
 //												MNodeStyleController.getShape(...).
